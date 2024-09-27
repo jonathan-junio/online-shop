@@ -3,7 +3,7 @@ package myapp.domain;
 import myapp.domain.enumeration.ProductStatus;
 import myapp.repository.ProductRepository;
 import myapp.service.ProductService;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -12,11 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.Duration;
+import myapp.domain.Product;
+
+
 
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ProductServiceTest {
+public class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
@@ -25,7 +29,7 @@ class ProductServiceTest {
     private ProductService productService;
 
     @Test
-    public void saveProduct_Sucess() {
+    public void saveProduct_Success() {
         Product product = createProductSample(
             1L,
             "title1",
