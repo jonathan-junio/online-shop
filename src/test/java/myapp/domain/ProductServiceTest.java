@@ -6,6 +6,7 @@ import myapp.service.ProductService;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.exceptions.base.MockitoException;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,7 +15,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 
-
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,11 +29,12 @@ public class ProductServiceTest {
 
     @Test
     public void saveProduct_Success() {
+        // should throw an exception because the description is too short
         Product product = createProductSample(
             1L,
             "title1",
             "keywords1",
-            "description1",
+            "des",
             5,
             BigDecimal.valueOf(100.00),
             10,
@@ -42,24 +44,10 @@ public class ProductServiceTest {
             Instant.now(),
             Instant.now());
 
-        when(productRepository.save(product)).thenReturn(product);
+        when(productRepository.save(product)).thenThrow(new MockitoException("Description should not be less than 10 characters"));
 
-        Product savedProduct = productService.save(product);
-
-        // check if the product was saved correctly
-        assertEquals(product, savedProduct);
-        assertEquals(product.getId(), savedProduct.getId());
-        assertEquals(product.getTitle(), savedProduct.getTitle());
-        assertEquals(product.getKeywords(), savedProduct.getKeywords());
-        assertEquals(product.getDescription(), savedProduct.getDescription());
-        assertEquals(product.getRating(), savedProduct.getRating());
-        assertEquals(product.getPrice(), savedProduct.getPrice());
-        assertEquals(product.getQuantityInStock(), savedProduct.getQuantityInStock());
-        assertEquals(product.getStatus(), savedProduct.getStatus());
-        assertEquals(product.getWeight(), savedProduct.getWeight());
-        assertEquals(product.getDimensions(), savedProduct.getDimensions());
-        assertEquals(product.getDateAdded(), savedProduct.getDateAdded());
-        assertEquals(product.getDateModified(), savedProduct.getDateModified());
+        Exception exception = assertThrows(Exception.class, () -> productService.save(product));
+        assertEquals("Description should not be less than 10 characters", exception.getMessage());
     }
 
     // create a product object for testing
@@ -77,20 +65,19 @@ public class ProductServiceTest {
         Instant dateAdded,
         Instant dateModified
     ) {
-        Product product = new Product();
-        product.setId(id);
-        product.setTitle(title);
-        product.setKeywords(keywords);
-        product.setDescription(description);
-        product.setRating(rating);
-        product.setPrice(price);
-        product.setQuantityInStock(quantityInStock);
-        product.setStatus(status);
-        product.setWeight(weight);
-        product.setDimensions(dimensions);
-        product.setDateAdded(dateAdded);
-        product.setDateModified(dateModified);
-        return product;
+        return new Product()
+            .id(id)
+            .title(title)
+            .keywords(keywords)
+            .description(description)
+            .rating(rating)
+            .price(price)
+            .quantityInStock(quantityInStock)
+            .status(status)
+            .weight(weight)
+            .dimensions(dimensions)
+            .dateAdded(dateAdded)
+            .dateModified(dateModified);
     }
 
     /*
