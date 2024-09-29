@@ -28,7 +28,7 @@ public class ProductServiceTest {
     private ProductService productService;
 
     @Test
-    public void saveProduct_Success() {
+    public void saveProduct_TitleTooShort() {
         // should throw an exception because the description is too short
         Product product = createProductSample(
             1L,
