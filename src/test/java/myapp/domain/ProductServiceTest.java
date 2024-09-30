@@ -11,6 +11,9 @@ import org.mockito.exceptions.base.MockitoException;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import java.util.stream.Stream;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -105,7 +108,7 @@ public class ProductServiceTest {
         if (product.getQuantityInStock() != null && product.getQuantityInStock() < 0) {
             return QUANTITY_NEGATIVE;
         }
-        if (product.getStatus() == null) {
+        if ((product.getStatus() != ProductStatus.IN_STOCK) && (product.getStatus() != ProductStatus.OUT_OF_STOCK) && (product.getStatus() != ProductStatus.DISCONTINUED)) {
             return STATUS_INVALID;
         }
         if (product.getWeight() != null && product.getWeight() < 0) {
@@ -123,288 +126,46 @@ public class ProductServiceTest {
         return null;
     }
 
-    @Test
-    @DisplayName("Teste de validação de produto válido")
-    public void saveProduct_ValidProduct() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
 
+    private static Stream<Product> generateProducts() {
+        return Stream.of(
+            createProductSample(1L, "AAA", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(2L, "A".repeat(100), null, "A".repeat(10), 5, BigDecimal.valueOf(0.00), null, ProductStatus.OUT_OF_STOCK, null, null, Instant.now(), Instant.now()),
+            createProductSample(3L, "A".repeat(100), null, "A".repeat(10), 5, BigDecimal.valueOf(0.00), null, ProductStatus.IN_STOCK, null, null, Instant.now(), Instant.now()),
+            createProductSample(4L, "BB", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(5L, "B".repeat(101), "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(6L, null, "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(7L, "AAA", "A".repeat(201), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(8L, "AAA", "A".repeat(200), "B".repeat(9), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(9L, "AAA", "A".repeat(200), "A".repeat(10), -1, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(10L, "AAA", "A".repeat(200), "A".repeat(10), 6, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(11L, "AAA", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(-1.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(12L, "AAA", "A".repeat(200), "A".repeat(10), 0, null, 15, ProductStatus.IN_STOCK, 0.0, "A".repeat(51), Instant.now(), null),
+            createProductSample(13L, "AAA", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), -1, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(14L, "AAA","A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.ON_SALE, 0.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(15L, "AAA", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, -1.0, "A".repeat(50), Instant.now(), null),
+            createProductSample(16L, "AAA", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "B".repeat(51), Instant.now(), null),
+            createProductSample(17L, "AAA", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), null ,null),
+            createProductSample(18L, "AAA", "A".repeat(200), "A".repeat(10), 0, BigDecimal.valueOf(0.00), 0, ProductStatus.IN_STOCK, 0.0, "A".repeat(50), Instant.now(), Instant.now().minusSeconds(1))
+        );
+    }
+
+    // Teste parametrizado que roda para cada produto gerado pelo método acima
+    @ParameterizedTest
+    @MethodSource("generateProducts")
+    @DisplayName("Teste parametrizado para múltiplos produtos")
+    public void saveProduct_MultipleProducts(Product product) {
+        // Usando mockito para simular a chamada de salvamento do produto
         when(productRepository.save(product)).thenReturn(product);
 
+        // Testar se o produto é salvo corretamente ou se falha devido à validação
+        mockValidation(product);
+
+        // Verificar se o produto foi salvo corretamente (se não houve exceção)
         Product savedProduct = productService.save(product);
         assertEquals(product, savedProduct);
     }
-
-    @Test
-    @DisplayName("Teste de validação de título muito curto")
-    public void saveProduct_TitleTooShort() {
-        Product product = createProductSample(
-            1L,
-            "AA",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de título muito longo")
-    public void saveProduct_TitleTooLong() {
-        Product product = createProductSample(
-            1L,
-            "A".repeat(101),
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de palavras-chave muito longas")
-    public void saveProduct_KeywordsTooLong() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "A".repeat(201),
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de descrição muito curta")
-    public void saveProduct_DescriptionTooShort() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "A".repeat(9),
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de avaliação fora do intervalo (abaixo)")
-    public void saveProduct_RatingOutOfRangeLow() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            -1,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de avaliação fora do intervalo (acima)")
-    public void saveProduct_RatingOutOfRangeHigh() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            6,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de preço negativo")
-    public void saveProduct_PriceNegative() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(-1.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de quantidade em estoque negativa")
-    public void saveProduct_QuantityNegative() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            -1,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de status inválido")
-    public void saveProduct_StatusInvalid() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            null,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de peso negativo")
-    public void saveProduct_WeightNegative() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            -1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de dimensões muito longas")
-    public void saveProduct_DimensionsTooLong() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "A".repeat(51),
-            Instant.now(),
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de data de adição inválida")
-    public void saveProduct_DateAddedInvalid() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            null,
-            Instant.now());
-
-        mockValidation(product);
-    }
-
-    @Test
-    @DisplayName("Teste de validação de data de modificação anterior à data de adição")
-    public void saveProduct_DateModifiedInvalid() {
-        Product product = createProductSample(
-            1L,
-            "title1",
-            "keywords1",
-            "description1",
-            5,
-            BigDecimal.valueOf(100.00),
-            10,
-            ProductStatus.IN_STOCK,
-            1.0,
-            "10x10x10",
-            Instant.now(),
-            Instant.now().minusSeconds(1));
-
-        mockValidation(product);
-    }
+}
 
     /*
     Requisito Funcional: Criar Novo Produto
@@ -423,4 +184,4 @@ public class ProductServiceTest {
         O sistema deve validar todos esses campos antes de permitir a criação de um produto. Se alguma validação falhar, o sistema deve notificar o usuário com mensagens claras, facilitando a correção dos dados.
      */
 
-}
+
